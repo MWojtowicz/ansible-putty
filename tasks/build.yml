@@ -1,0 +1,56 @@
+---
+- name: Check if PuTTY was builded
+  stat: path=/etc/putty
+  register: putty
+
+- name: Download PuTTY source
+  get_url:
+    url: https://the.earth.li/~sgtatham/putty/latest/putty.tar.gz
+    dest: /root/putty.tar.gz
+  when: not putty.stat.exists
+
+- name: Unarchive PuTTY
+  unarchive:
+    src: /root/putty.tar.gz
+    dest: /etc
+    remote_src: yes
+  when: not putty.stat.exists
+
+- name: Remove putty dir
+  file:
+    path: "/etc/putty"
+    state: absent
+  when: not putty.stat.exists
+
+- name: Find putty dir
+  find:
+    paths: "/etc"
+    patterns: "putty*"
+    file_type: directory
+  when: not putty.stat.exists
+  register: puttyDirPath
+  failed_when: "puttyDirPath.files|length != 1"
+
+- name: Rename putty dir
+  command: mv {{ puttyDirPath.files.0.path }} /etc/putty
+  args:
+    chdir: /
+  when: not putty.stat.exists
+
+- name: Configure PuTTY
+  command: ./configure && make
+  args:
+    chdir: /etc/putty/unix
+  when: not putty.stat.exists
+
+- name: Make PuTTY
+  command: make
+  args:
+    chdir: /etc/putty/unix
+  when: not putty.stat.exists
+
+- name: Install PuTTY
+  command: make install
+  args:
+    chdir: /etc/putty/unix
+  when: not putty.stat.exists
